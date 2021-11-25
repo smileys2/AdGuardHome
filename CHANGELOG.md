@@ -15,6 +15,7 @@ and this project adheres to
 
 ### Added
 
+- Upstream server information for responses from cache ([#3772]).
 - Finnish and Ukrainian translations.
 - Setting the timeout for IP address pinging in the "Fastest IP address" mode
   through the new `fastest_timeout` field in the configuration file ([#1992]).
@@ -47,6 +48,7 @@ and this project adheres to
 
 ### Changed
 
+- Responses from cache are now labeled ([#3772]).
 - Better error message for ED25519 private keys, which are not widely supported
   ([#3737]).
 - Cache now follows RFC more closely for negative answers ([#3707]).
@@ -221,6 +223,7 @@ In this release, the schema version has changed from 10 to 12.
 [#3655]: https://github.com/AdguardTeam/AdGuardHome/issues/3655
 [#3707]: https://github.com/AdguardTeam/AdGuardHome/issues/3707
 [#3744]: https://github.com/AdguardTeam/AdGuardHome/issues/3744
+[#3772]: https://github.com/AdguardTeam/AdGuardHome/issues/3772
 [#3815]: https://github.com/AdguardTeam/AdGuardHome/issues/3815
 
 

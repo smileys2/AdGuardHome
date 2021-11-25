@@ -88,6 +88,7 @@ func (l *queryLog) logEntryToJSONEntry(entry *logEntry) (jsonEntry jobject) {
 		"client":       l.getClientIP(entry.IP),
 		"client_info":  entry.client,
 		"client_proto": entry.ClientProto,
+		"cached":       entry.Cached,
 		"upstream":     entry.Upstream,
 		"question":     question,
 	}

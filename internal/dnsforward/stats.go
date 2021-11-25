@@ -28,8 +28,9 @@ func (s *Server) processQueryLogsAndStats(ctx *dnsContext) (rc resultCode) {
 	s.serverLock.RLock()
 	defer s.serverLock.RUnlock()
 
-	// Synchronize access to s.queryLog and s.stats so they won't be suddenly uninitialized while in use.
-	// This can happen after proxy server has been stopped, but its workers haven't yet exited.
+	// Synchronize access to s.queryLog and s.stats so they won't be suddenly
+	// uninitialized while in use.  This can happen after proxy server has been
+	// stopped, but its workers haven't yet exited.
 	if shouldLog && s.queryLog != nil {
 		ip, _ := netutil.IPAndPortFromAddr(pctx.Addr)
 		p := querylog.AddParams{
@@ -52,12 +53,14 @@ func (s *Server) processQueryLogsAndStats(ctx *dnsContext) (rc resultCode) {
 		case proxy.ProtoDNSCrypt:
 			p.ClientProto = querylog.ClientProtoDNSCrypt
 		default:
-			// Consider this a plain DNS-over-UDP or DNS-over-TCP
-			// request.
+			// Consider this a plain DNS-over-UDP or DNS-over-TCP request.
 		}
 
 		if pctx.Upstream != nil {
 			p.Upstream = pctx.Upstream.Address()
+		} else if cachedUps := pctx.CachedUpstreamAddr; cachedUps != "" {
+			p.Upstream = pctx.CachedUpstreamAddr
+			p.Cached = true
 		}
 
 		s.queryLog.Add(p)
