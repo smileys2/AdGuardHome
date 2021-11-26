@@ -15,7 +15,8 @@ and this project adheres to
 
 ### Added
 
-- Upstream server information for responses from cache ([#3772]).
+- Upstream server information for responses from cache ([#3772]).  Note that old
+  log entries concerning cached responses won't include that information.
 - Finnish and Ukrainian translations.
 - Setting the timeout for IP address pinging in the "Fastest IP address" mode
   through the new `fastest_timeout` field in the configuration file ([#1992]).
