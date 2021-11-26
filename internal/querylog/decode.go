@@ -613,7 +613,6 @@ func decodeResult(dec *json.Decoder, ent *logEntry) {
 }
 
 func decodeLogEntry(ent *logEntry, str string) {
-	// TODO(e.burkov):  !! Consider determining Cached field afterwards.
 	dec := json.NewDecoder(strings.NewReader(str))
 	dec.UseNumber()
 	for {
