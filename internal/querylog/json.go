@@ -2,7 +2,6 @@ package querylog
 
 import (
 	"fmt"
-	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -14,22 +13,6 @@ import (
 )
 
 // TODO(a.garipov): Use a proper structured approach here.
-
-// Get Client IP address
-func (l *queryLog) getClientIP(ip net.IP) (clientIP net.IP) {
-	if l.conf.AnonymizeClientIP && ip != nil {
-		const AnonymizeClientIPv4Mask = 16
-		const AnonymizeClientIPv6Mask = 112
-
-		if ip.To4() != nil {
-			return ip.Mask(net.CIDRMask(AnonymizeClientIPv4Mask, 32))
-		}
-
-		return ip.Mask(net.CIDRMask(AnonymizeClientIPv6Mask, 128))
-	}
-
-	return ip
-}
 
 // jobject is a JSON object alias.
 type jobject = map[string]interface{}
@@ -81,11 +64,13 @@ func (l *queryLog) logEntryToJSONEntry(entry *logEntry) (jsonEntry jobject) {
 		log.Debug("translating %q into unicode: %s", hostname, err)
 	}
 
+	l.anonymizer.Mutate(entry.IP)
+
 	jsonEntry = jobject{
 		"reason":       entry.Result.Reason.String(),
 		"elapsedMs":    strconv.FormatFloat(entry.Elapsed.Seconds()*1000, 'f', -1, 64),
 		"time":         entry.Time.Format(time.RFC3339Nano),
-		"client":       l.getClientIP(entry.IP),
+		"client":       entry.IP,
 		"client_info":  entry.client,
 		"client_proto": entry.ClientProto,
 		"upstream":     entry.Upstream,

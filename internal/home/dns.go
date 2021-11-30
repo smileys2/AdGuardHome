@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/AdguardTeam/AdGuardHome/internal/aghnet"
 	"github.com/AdguardTeam/AdGuardHome/internal/dnsforward"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/AdGuardHome/internal/querylog"
@@ -33,19 +34,27 @@ func onConfigModified() {
 	_ = config.write()
 }
 
+// anonymizeIP masks ip so it has 2 last bytes zeroed.
+//
+// TODO(e.burkov):  Clarify the source of the mask.
+func anonymizeIP(ip net.IP) {
+	if l := len(ip); l > 2 {
+		ip[l-2], ip[l-1] = 0, 0
+	}
+}
+
 // initDNSServer creates an instance of the dnsforward.Server
 // Please note that we must do it even if we don't start it
 // so that we had access to the query log and the stats
-func initDNSServer() error {
-	var err error
+func initDNSServer() (err error) {
 	baseDir := Context.getDataDir()
+	anonymizer := aghnet.NewIPMutator(config.DNS.AnonymizeClientIP, anonymizeIP)
 
 	statsConf := stats.Config{
-		Filename:          filepath.Join(baseDir, "stats.db"),
-		LimitDays:         config.DNS.StatsInterval,
-		AnonymizeClientIP: config.DNS.AnonymizeClientIP,
-		ConfigModified:    onConfigModified,
-		HTTPRegister:      httpRegister,
+		Filename:       filepath.Join(baseDir, "stats.db"),
+		LimitDays:      config.DNS.StatsInterval,
+		ConfigModified: onConfigModified,
+		HTTPRegister:   httpRegister,
 	}
 	Context.stats, err = stats.New(statsConf)
 	if err != nil {
@@ -62,6 +71,7 @@ func initDNSServer() error {
 		Enabled:           config.DNS.QueryLogEnabled,
 		FileEnabled:       config.DNS.QueryLogFileEnabled,
 		AnonymizeClientIP: config.DNS.AnonymizeClientIP,
+		Anonymizer:        anonymizer,
 	}
 	Context.queryLog = querylog.New(conf)
 
@@ -76,6 +86,7 @@ func initDNSServer() error {
 		Stats:          Context.stats,
 		QueryLog:       Context.queryLog,
 		SubnetDetector: Context.subnetDetector,
+		Anonymizer:     anonymizer,
 		LocalDomain:    config.DNS.LocalDomainName,
 	}
 	if Context.dhcpServer != nil {
@@ -90,7 +101,8 @@ func initDNSServer() error {
 	}
 
 	Context.clients.dnsServer = Context.dnsServer
-	dnsConfig, err := generateServerConfig()
+	var dnsConfig dnsforward.ServerConfig
+	dnsConfig, err = generateServerConfig()
 	if err != nil {
 		closeDNSServer()
 
@@ -100,6 +112,7 @@ func initDNSServer() error {
 	err = Context.dnsServer.Prepare(&dnsConfig)
 	if err != nil {
 		closeDNSServer()
+
 		return fmt.Errorf("dnsServer.Prepare: %w", err)
 	}
 

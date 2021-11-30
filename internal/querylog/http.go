@@ -12,6 +12,7 @@ import (
 	"github.com/AdguardTeam/golibs/jsonutil"
 	"github.com/AdguardTeam/golibs/log"
 	"github.com/AdguardTeam/golibs/stringutil"
+	"github.com/AdguardTeam/golibs/timeutil"
 	"golang.org/x/net/idna"
 )
 
@@ -90,21 +91,26 @@ func (l *queryLog) handleQueryLogInfo(w http.ResponseWriter, r *http.Request) {
 
 // Set configuration
 func (l *queryLog) handleQueryLogConfig(w http.ResponseWriter, r *http.Request) {
-	d := qlogConfig{}
-	req, err := jsonutil.DecodeObject(&d, r.Body)
+	d := &qlogConfig{}
+	req, err := jsonutil.DecodeObject(d, r.Body)
 	if err != nil {
 		httpError(r, w, http.StatusBadRequest, "%s", err)
 		return
 	}
 
-	ivl := time.Duration(24*d.Interval) * time.Hour
+	ivl := time.Duration(float64(timeutil.Day) * d.Interval)
 	if req.Exists("interval") && !checkInterval(ivl) {
 		httpError(r, w, http.StatusBadRequest, "Unsupported interval")
 		return
 	}
 
+	defer l.conf.ConfigModified()
+
 	l.lock.Lock()
-	// copy data, modify it, then activate.  Other threads (readers) don't need to use this lock.
+	defer l.lock.Unlock()
+
+	// Copy data, modify it, then activate.  Other threads (readers) don't need
+	// to use this lock.
 	conf := *l.conf
 	if req.Exists("enabled") {
 		conf.Enabled = d.Enabled
@@ -114,11 +120,9 @@ func (l *queryLog) handleQueryLogConfig(w http.ResponseWriter, r *http.Request) 
 	}
 	if req.Exists("anonymize_client_ip") {
 		conf.AnonymizeClientIP = d.AnonymizeClientIP
+		l.anonymizer.SetEnabled(d.AnonymizeClientIP)
 	}
 	l.conf = &conf
-	l.lock.Unlock()
-
-	l.conf.ConfigModified()
 }
 
 // "value" -> value, return TRUE
